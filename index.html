@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f0f1a" />
+  <title>ZAP DASH — Dodge &amp; Score</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-box" id="hud-score">
+        <span class="hud-label">SCORE</span>
+        <span class="hud-value" id="score-display">0</span>
+      </div>
+      <div class="hud-box" id="hud-best">
+        <span class="hud-label">BEST</span>
+        <span class="hud-value" id="best-display">0</span>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay">
+      <div class="overlay-inner">
+        <div class="logo-wrap">
+          <div class="logo-icon">⚡</div>
+          <h1 class="logo-title">ZAP DASH</h1>
+          <p class="logo-sub">Dodge · Survive · Score</p>
+        </div>
+        <div class="instructions">
+          <div class="inst-row"><span class="inst-icon">👆</span><span>Tap to jump &amp; dodge</span></div>
+          <div class="inst-row"><span class="inst-icon">🎯</span><span>Hit ✅ gates, avoid ❌ gates</span></div>
+          <div class="inst-row"><span class="inst-icon">🔥</span><span>Speed increases over time</span></div>
+        </div>
+        <button id="start-btn" class="btn btn-primary">TAP TO PLAY</button>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="overlay hidden">
+      <div class="overlay-inner">
+        <div class="go-header">
+          <div class="go-icon">💥</div>
+          <h2 class="go-title">GAME OVER</h2>
+        </div>
+        <div class="go-scores">
+          <div class="go-score-box">
+            <span class="go-label">YOUR SCORE</span>
+            <span class="go-value" id="final-score">0</span>
+          </div>
+          <div class="go-score-box go-best-box">
+            <span class="go-label">🏆 BEST</span>
+            <span class="go-value" id="final-best">0</span>
+          </div>
+        </div>
+        <div id="new-best-badge" class="new-best hidden">🎉 NEW BEST!</div>
+        <button id="restart-btn" class="btn btn-primary">PLAY AGAIN</button>
+        <button id="home-btn" class="btn btn-secondary">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
