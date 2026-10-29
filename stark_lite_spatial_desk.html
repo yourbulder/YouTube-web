@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STARK LITE // Minimalist Spatial Hand-Tracking Desk</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- MediaPipe Hands & Camera Utils -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg-obsidian: #070b12;
+      --accent-cyan: #38bdf8;
+      --accent-gold: #facc15;
+      --accent-green: #4ade80;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-obsidian);
+      background-image: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.08) 0%, rgba(7, 11, 18, 1) 70%);
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Minimalist Glassmorphic Pill & Cards */
+    .glass-pill {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.08);
+    }
+
+    .glass-card {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Spatial Button Hover/Active States */
+    .spatial-btn {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .spatial-btn.hand-hover {
+      transform: scale(1.06);
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Custom Minimal Range Slider */
+    input[type="range"].clean-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(56, 189, 248, 0.2);
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"].clean-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 12px #38bdf8;
+      cursor: pointer;
+      border: 2px solid #0f172a;
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden select-none">
+
+  <!-- Hidden Webcam Video Input -->
+  <video id="webcam-video" class="hidden" playsinline muted></video>
+
+  <!-- FULLSCREEN INTERACTIVE HOLOGRAM & HAND CANVAS -->
+  <canvas id="holo-canvas" class="absolute inset-0 w-full h-full z-10 cursor-none"></canvas>
+
+  <!-- ==================== 1. SINGLE TOP FLOATING PILL BAR ==================== -->
+  <header class="fixed top-5 left-1/2 -translate-x-1/2 z-30 max-w-[96vw]">
+    <div class="glass-pill rounded-full px-3 sm:px-5 py-2 flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+      
+      <!-- Status & Pinch Telemetry Pill -->
+      <div class="flex items-center gap-2.5 pr-2 sm: border-r border-slate-700/70">
+        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]"></span>
+        <span id="tracking-mode-label" class="font-mono-code text-xs font-medium text-slate-300 tracking-tight">MOUSE SIM</span>
+        <span class="text-slate-600">•</span>
+        <span id="fps-counter" class="font-mono-code text-xs text-sky-400">60 FPS</span>
+        <span id="pinch-badge" class="ml-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono-code font-semibold bg-slate-800/90 text-slate-300 border border-slate-700 transition-colors">
+          OPEN
+        </span>
+      </div>
+
+      <!-- 4 Clean Mode Tabs -->
+      <nav class="flex items-center gap-1 sm:gap-1.5">
+        <button id="tab-draw" onclick="switchMode('draw')"
+          class="spatial-btn px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-sky-500/20 text-sky-300 border border-sky-400/50 cursor-pointer">
+          1. Air Draw
+        </button>
+        <button id="tab-type" onclick="switchMode('type')"
+          class="spatial-btn px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
+          2. Air Type
+        </button>
+        <button id="tab-core" onclick="switchMode('core')"
+          class="spatial-btn px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
+          3. 3D Core
+        </button>
+        <button id="tab-teach" onclick="switchMode('teach')"
+          class="spatial-btn px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
+          4. How It Works
+        </button>
+      </nav>
+
+      <!-- Single Camera Toggle Button -->
+      <div class="pl-1 sm:border-l border-slate-700/70">
+        <button id="btn-camera" onclick="toggleCamera()"
+          class="spatial-btn px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-[0_0_15px_rgba(56,189,248,0.4)] cursor-pointer">
+          Enable Camera
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Subtle Gesture Hint Pill (Top Sub-caption) -->
+  <div id="gesture-hint" class="fixed top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center">
+    <p class="text-xs font-mono-code text-slate-400/90 bg-slate-900/50 px-3.5 py-1 rounded-full border border-slate-800/80">
+      Move hand to guide cursor • <span class="text-sky-300">Pinch Index &amp; Thumb</span> (or Hold Click / Spacebar) to Draw &amp; Click
+    </p>
+  </div>
+
+  <!-- ==================== MODE 1: AIR DRAW (DEFAULT) ==================== -->
+  <section id="view-draw" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
+    <div class="glass-pill rounded-full px-5 py-2.5 flex items-center gap-3 sm:gap-4">
+      <!-- 5 Large Easy-to-Pinch Color Swatches -->
+      <div class="flex items-center gap-2.5 pr-3 border-r border-slate-700/70">
+        <button onclick="setInkColor('#38bdf8', this)" class="spatial-btn ink-swatch w-9 h-9 rounded-full bg-[#38bdf8] border-2 border-white scale-110 shadow-[0_0_12px_#38bdf8] cursor-pointer" title="Cyan"></button>
+        <button onclick="setInkColor('#facc15', this)" class="spatial-btn ink-swatch w-9 h-9 rounded-full bg-[#facc15] border-2 border-transparent opacity-80 hover:opacity-100 cursor-pointer" title="Gold"></button>
+        <button onclick="setInkColor('#f43f5e', this)" class="spatial-btn ink-swatch w-9 h-9 rounded-full bg-[#f43f5e] border-2 border-transparent opacity-80 hover:opacity-100 cursor-pointer" title="Crimson"></button>
+        <button onclick="setInkColor('#4ade80', this)" class="spatial-btn ink-swatch w-9 h-9 rounded-full bg-[#4ade80] border-2 border-transparent opacity-80 hover:opacity-100 cursor-pointer" title="Neon Green"></button>
+        <button onclick="setInkColor('#ffffff', this)" class="spatial-btn ink-swatch w-9 h-9 rounded-full bg-[#ffffff] border-2 border-transparent opacity-80 hover:opacity-100 cursor-pointer" title="Pure White"></button>
+      </div>
+
+      <!-- Brush Controls -->
+      <button id="btn-symmetry" onclick="toggleSymmetry()"
+        class="spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-slate-800/90 text-slate-200 border border-slate-700 cursor-pointer">
+        Symmetry: OFF
+      </button>
+      <button onclick="undoStroke()"
+        class="spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-slate-800/90 text-slate-200 border border-slate-700 cursor-pointer">
+        Undo
+      </button>
+      <button onclick="clearCanvas()"
+        class="spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-rose-500/20 text-rose-300 border border-rose-500/40 cursor-pointer">
+        Clear
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== MODE 2: AIR TYPE (SPATIAL KEYBOARD) ==================== -->
+  <section id="view-type" class="hidden fixed inset-0 z-20 pointer-events-none flex flex-col items-center justify-between pt-28 pb-8 px-4">
+    <!-- Top Centered Output Display Bar -->
+    <div class="glass-card rounded-2xl px-6 py-4 w-full max-w-3xl pointer-events-auto flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3 overflow-x-auto">
+          <span class="font-mono-code text-xs uppercase tracking-wider text-sky-400 font-semibold">AIR INPUT</span>
+          <div class="h-4 w-[1px] bg-slate-700"></div>
+          <span id="typed-output" class="font-mono-code text-xl sm:text-2xl font-semibold text-white tracking-wide">HELLO JARVIS</span>
+          <span class="w-2.5 h-6 bg-sky-400 inline-block animate-pulse"></span>
+        </div>
+
+        <!-- Dwell Hover Toggle -->
+        <button id="btn-dwell-toggle" onclick="toggleDwellMode()"
+          class="spatial-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono-code font-medium bg-sky-500/20 text-sky-300 border border-sky-400/40 cursor-pointer">
+          Dwell Auto-Type: ON (0.5s)
+        </button>
+      </div>
+
+      <!-- Quick AI / Math Evaluation Response Badge -->
+      <div id="type-response-badge" class="text-xs font-mono-code text-emerald-400 pt-1 border-t border-slate-800/80">
+        J.A.R.V.I.S. Ready — Type words (HELLO, JARVIS, CLEAR) or math (e.g. 24*7) and hit ENTER.
+      </div>
+    </div>
+
+    <!-- Spacious Spatial QWERTY Keyboard Grid -->
+    <div id="spatial-keyboard" class="glass-card rounded-3xl p-4 sm:p-6 pointer-events-auto flex flex-col gap-2.5 max-w-4xl w-full">
+      <!-- Dynamically populated by JS with large 58px+ keys and SVG circular dwell rings -->
+    </div>
+  </section>
+
+  <!-- ==================== MODE 3: 3D CORE (INTERACTIVE HOLOGRAM) ==================== -->
+  <section id="view-core" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
+    <div class="glass-pill rounded-full px-5 py-2.5 flex items-center gap-3">
+      <button id="btn-shape-reactor" onclick="setCoreShape('reactor')"
+        class="spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-sky-500/25 text-sky-300 border border-sky-400 cursor-pointer">
+        Arc Reactor
+      </button>
+      <button id="btn-shape-tesseract" onclick="setCoreShape('tesseract')"
+        class="spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-slate-800/80 text-slate-300 border border-slate-700 cursor-pointer">
+        Tesseract
+      </button>
+      <button id="btn-shape-sphere" onclick="setCoreShape('sphere')"
+        class="spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-slate-800/80 text-slate-300 border border-slate-700 cursor-pointer">
+        Holo Sphere
+      </button>
+      <div class="h-5 w-[1px] bg-slate-700 mx-1"></div>
+      <button id="btn-autospin" onclick="toggleAutoSpin()"
+        class="spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-pointer">
+        Auto-Spin: ON
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== MODE 4: HOW IT WORKS (2 CLEAN TEACHING CARDS) ==================== -->
+  <section id="view-teach" class="hidden fixed inset-0 z-20 pointer-events-none flex items-center justify-center px-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full pointer-events-auto">
+      
+      <!-- Card 1: Pinch Detection (Euclidean Distance) -->
+      <div class="glass-card rounded-3xl p-6 flex flex-col justify-between gap-4">
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono-code uppercase tracking-wider px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30">
+              01 // Gesture Math
+            </span>
+            <span id="teach-pinch-status" class="text-xs font-mono-code font-semibold text-slate-400">HOVERING</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Pinch Detection (Euclidean Distance)</h3>
+          <p class="text-sm text-slate-300/90 leading-relaxed">
+            MediaPipe tracks 21 hand landmarks in normalized <code class="text-sky-300">0.0 – 1.0</code> space. We trigger a click or brush stroke when the distance between <strong>Index Tip (LM 8)</strong> and <strong>Thumb Tip (LM 4)</strong> drops below <code class="text-amber-300">0.055</code>.
+          </p>
+        </div>
+
+        <div class="bg-slate-950/90 rounded-2xl p-4 border border-slate-800 font-mono-code text-xs space-y-2">
+          <div class="text-slate-400">d = √((x₈ - x₄)² + (y₈ - y₄)²)</div>
+          <div id="live-formula-euclid" class="text-sky-300 font-semibold text-sm">
+            d = √((0.50 - 0.45)² + (0.50 - 0.55)²) = 0.071
+          </div>
+          <!-- Live Pinch Distance Bar -->
+          <div class="pt-2 space-y-1">
+            <div class="flex justify-between text-[11px] text-slate-400">
+              <span>0.00 (Pinched)</span>
+              <span class="text-amber-400">Threshold: 0.055</span>
+              <span>0.15 (Open)</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden relative border border-slate-800">
+              <div class="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10" style="left: 36.6%;"></div>
+              <div id="teach-pinch-bar" class="h-full bg-sky-400 transition-all duration-75" style="width: 55%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Zero-Lag Smoothing (Linear Interpolation / LERP) -->
+      <div class="glass-card rounded-3xl p-6 flex flex-col justify-between gap-4">
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono-code uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30">
+              02 // Signal Filtering
+            </span>
+            <span id="teach-alpha-badge" class="text-xs font-mono-code font-semibold text-emerald-400">α = 0.35</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white">Zero-Lag Smoothing (LERP Filter)</h3>
+          <p class="text-sm text-slate-300/90 leading-relaxed">
+            Raw webcam inference jitters frame-to-frame. By blending the previous smoothed coordinate with the new raw coordinate using factor <strong class="text-sky-300">α</strong> at 60 FPS, strokes become silky smooth.
+          </p>
+        </div>
+
+        <div class="bg-slate-950/90 rounded-2xl p-4 border border-slate-800 font-mono-code text-xs space-y-3">
+          <div class="text-slate-400">smoothPos = prevPos + (rawPos - prevPos) × α</div>
+          <div id="live-formula-lerp" class="text-emerald-300 font-semibold text-sm">
+            X = 0.500 + (0.508 - 0.500) × 0.35
+          </div>
+
+          <!-- Interactive Alpha Slider -->
+          <div class="pt-1 space-y-1.5">
+            <div class="flex justify-between text-[11px] text-slate-300">
+              <span>Smooth / Floaty (0.10)</span>
+              <span>Instant / Raw (1.00)</span>
+            </div>
+            <input id="slider-alpha" type="range" min="0.10" max="1.00" step="0.05" value="0.35"
+              class="clean-slider" oninput="updateAlpha(this.value)" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== BOTTOM-RIGHT MIRRORED WEBCAM PREVIEW ==================== -->
+  <div id="webcam-preview-box" class="hidden fixed bottom-5 right-5 z-30 w-40 h-[120px] rounded-2xl overflow-hidden border border-sky-400/50 shadow-[0_10px_30px_rgba(0,0,0,0.7)] bg-slate-950">
+    <canvas id="webcam-mini-canvas" class="w-full h-full object-cover"></canvas>
+    <div class="absolute bottom-1.5 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-[10px] font-mono-code text-sky-300 flex items-center gap-1.5">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+      LIVE CAM
+    </div>
+  </div>
+
+  <!-- ==================== APPLICATION SCRIPT ==================== -->
+  <script>
+    /*************************************************************************
+     * 1. SUBTLE WEB AUDIO FEEDBACK SYNTHESIZER
+     *************************************************************************/
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      tone(freq = 800, duration = 0.05, type = 'sine', vol = 0.05) {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (e) {}
+      }
+      pinch() { this.tone(1100, 0.05, 'sine', 0.06); }
+      key()   { this.tone(1380, 0.045, 'triangle', 0.06); }
+      mode()  { this.tone(680, 0.08, 'sine', 0.05); }
+    }
+    const sfx = new SoundEngine();
+
+    /*************************************************************************
+     * 2. STATE & 21-LANDMARK HAND MODEL
+     *************************************************************************/
+    const state = {
+      mode: 'draw', // 'draw' | 'type' | 'core' | 'teach'
+      cameraActive: false,
+      lerpAlpha: 0.35,
+      pinchThreshold: 0.055,
+
+      // Hand Landmarks (21 points in 0..1 normalized space)
+      rawLandmarks: Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 })),
+      smoothLandmarks: Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 })),
+
+      // Active Cursor (Midpoint between Thumb LM4 & Index LM8)
+      cursorX: 0.5,
+      cursorY: 0.5,
+      pinchDist: 0.08,
+      isPinching: false,
+      wasPinching: false,
+
+      // Mouse/Touch Fallback Input
+      mouseX: 0.5,
+      mouseY: 0.5,
+      mouseDown: false,
+
+      // Mode 1: Air Draw
+      inkColor: '#38bdf8',
+      symmetry: false,
+      strokes: [],
+      activeStroke: null,
+
+      // Mode 2: Air Type
+      typedText: 'HELLO JARVIS',
+      dwellEnabled: true,
+      hoveredKey: null,
+      hoverStart: 0,
+      lastKeyTime: 0,
+
+      // Mode 3: 3D Core
+      coreShape: 'reactor', // 'reactor' | 'tesseract' | 'sphere'
+      autoSpin: true,
+      rotX: 0.35,
+      rotY: 0.65,
+      coreScale: 1.0,
+
+      // Spatial Button Cooldown
+      lastBtnClick: 0
+    };
+
+    const HAND_BONES = [
+      [0,1],[1,2],[2,3],[3,4],       // Thumb
+      [0,5],[5,6],[6,7],[7,8],       // Index
+      [0,9],[9,10],[10,11],[11,12],  // Middle
+      [0,13],[13,14],[14,15],[15,16],// Ring
+      [0,17],[17,18],[18,19],[19,20],// Pinky
+      [5,9],[9,13],[13,17],[0,17]    // Palm
+    ];
+
+    // Updates simulated 21-point hand skeleton from mouse position
+    function updateSimulatedHand(mx, my, pinching) {
+      const spread = pinching ? 0.014 : 0.068;
+      // Thumb Tip (LM 4) and Index Tip (LM 8) straddle the cursor midpoint
+      const ix = mx + spread * 0.35;
+      const iy = my - spread * 0.35;
+      const tx = mx - spread * 0.35;
+      const ty = my + spread * 0.35;
+
+      const wx = mx + 0.03;
+      const wy = my + 0.19;
+
+      const pts = [
+        { x: wx, y: wy },                                  // 0 Wrist
+        { x: wx - 0.04, y: wy - 0.035 },                   // 1
+        { x: wx - 0.06, y: wy - 0.075 },                   // 2
+        { x: (wx - 0.06 + tx) * 0.5, y: (wy - 0.075 + ty) * 0.5 }, // 3
+        { x: tx, y: ty },                                  // 4 Thumb Tip
+        { x: mx - 0.01, y: my + 0.09 },                    // 5
+        { x: mx - 0.005, y: my + 0.05 },                   // 6
+        { x: (mx + ix) * 0.5, y: (my + 0.03 + iy) * 0.5 }, // 7
+        { x: ix, y: iy },                                  // 8 Index Tip
+        { x: mx + 0.02, y: my + 0.095 },                   // 9
+        { x: mx + 0.024, y: my + 0.05 },                   // 10
+        { x: mx + 0.026, y: my + 0.02 },                   // 11
+        { x: mx + 0.028, y: my - 0.005 + (pinching ? 0.02 : 0) }, // 12 Middle Tip
+        { x: mx + 0.046, y: my + 0.105 },                  // 13
+        { x: mx + 0.052, y: my + 0.065 },                  // 14
+        { x: mx + 0.055, y: my + 0.038 },                  // 15
+        { x: mx + 0.057, y: my + 0.015 + (pinching ? 0.02 : 0) }, // 16 Ring Tip
+        { x: mx + 0.07, y: my + 0.12 },                    // 17
+        { x: mx + 0.076, y: my + 0.085 },                  // 18
+        { x: mx + 0.08, y: my + 0.062 },                   // 19
+        { x: mx + 0.083, y: my + 0.042 + (pinching ? 0.015 : 0) } // 20 Pinky Tip
+      ];
+
+      for (let i = 0; i < 21; i++) {
+        state.rawLandmarks[i].x = pts[i].x;
+        state.rawLandmarks[i].y = pts[i].y;
+      }
+    }
+
+    // LERP Smoothing + Euclidean Pinch Detection
+    function stepKinematics() {
+      const a = state.lerpAlpha;
+      for (let i = 0; i < 21; i++) {
+        state.smoothLandmarks[i].x += (state.rawLandmarks[i].x - state.smoothLandmarks[i].x) * a;
+        state.smoothLandmarks[i].y += (state.rawLandmarks[i].y - state.smoothLandmarks[i].y) * a;
+      }
+
+      const lm4 = state.smoothLandmarks[4]; // Thumb Tip
+      const lm8 = state.smoothLandmarks[8]; // Index Tip
+
+      // Midpoint between Thumb and Index is the most natural spatial cursor
+      state.cursorX = (lm4.x + lm8.x) * 0.5;
+      state.cursorY = (lm4.y + lm8.y) * 0.5;
+
+      const dx = lm8.x - lm4.x;
+      const dy = lm8.y - lm4.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      state.pinchDist = dist;
+
+      // Hysteresis debounce
+      state.wasPinching = state.isPinching;
+      if (!state.isPinching && dist < state.pinchThreshold) {
+        state.isPinching = true;
+        sfx.pinch();
+      } else if (state.isPinching && dist > state.pinchThreshold + 0.012) {
+        state.isPinching = false;
+      }
+
+      // Update Top Pill Pinch Badge
+      const badge = document.getElementById('pinch-badge');
+      if (state.isPinching) {
+        badge.textContent = 'PINCHED';
+        badge.className = 'ml-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono-code font-semibold bg-amber-400/20 text-amber-300 border border-amber-400/60';
+      } else {
+        badge.textContent = 'OPEN';
+        badge.className = 'ml-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono-code font-semibold bg-slate-800/90 text-slate-300 border border-slate-700';
+      }
+
+      // Update Mode 4 Live Teaching Cards if visible
+      if (state.mode === 'teach') {
+        document.getElementById('live-formula-euclid').textContent =
+          `d = √((${lm8.x.toFixed(2)} - ${lm4.x.toFixed(2)})² + (${lm8.y.toFixed(2)} - ${lm4.y.toFixed(2)})²) = ${dist.toFixed(3)}`;
+        const pct = Math.min(100, Math.max(0, (dist / 0.15) * 100));
+        const bar = document.getElementById('teach-pinch-bar');
+        bar.style.width = `${pct}%`;
+        bar.className = `h-full transition-all duration-75 ${state.isPinching ? 'bg-amber-400' : 'bg-sky-400'}`;
+
+        const st = document.getElementById('teach-pinch-status');
+        st.textContent = state.isPinching ? 'PINCH ACTIVE!' : 'HOVERING';
+        st.className = `text-xs font-mono-code font-semibold ${state.isPinching ? 'text-amber-400' : 'text-slate-400'}`;
+
+        const raw8 = state.rawLandmarks[8];
+        document.getElementById('live-formula-lerp').textContent =
+          `X = ${lm8.x.toFixed(3)} + (${raw8.x.toFixed(3)} - ${lm8.x.toFixed(3)}) × ${state.lerpAlpha.toFixed(2)}`;
+      }
+    }
+
+    /*************************************************************************
+     * 3. MEDIAPIPE CAMERA HAND TRACKING
+     *************************************************************************/
+    let mpHands = null;
+    let mpCamera = null;
+    const videoEl = document.getElementById('webcam-video');
+    const miniCanvas = document.getElementById('webcam-mini-canvas');
+    const miniCtx = miniCanvas.getContext('2d');
+
+    async function toggleCamera() {
+      const btn = document.getElementById('btn-camera');
+      const modeLbl = document.getElementById('tracking-mode-label');
+      const dot = document.getElementById('status-dot');
+      const previewBox = document.getElementById('webcam-preview-box');
+
+      if (state.cameraActive) {
+        state.cameraActive = false;
+        if (mpCamera && mpCamera.stop) await mpCamera.stop();
+        if (videoEl.srcObject) {
+          videoEl.srcObject.getTracks().forEach(t => t.stop());
+          videoEl.srcObject = null;
+        }
+        previewBox.classList.add('hidden');
+        btn.textContent = 'Enable Camera';
+        btn.className = 'spatial-btn px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-[0_0_15px_rgba(56,189,248,0.4)] cursor-pointer';
+        modeLbl.textContent = 'MOUSE SIM';
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]';
+        return;
+      }
+
+      try {
+        btn.textContent = 'Starting...';
+        if (!mpHands) {
+          mpHands = new Hands({
+            locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+          });
+          mpHands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.65,
+            minTrackingConfidence: 0.65
+          });
+          mpHands.onResults((results) => {
+            if (!state.cameraActive) return;
+            miniCanvas.width = 160;
+            miniCanvas.height = 120;
+            miniCtx.save();
+            miniCtx.scale(-1, 1);
+            miniCtx.drawImage(results.image, -160, 0, 160, 120);
+            miniCtx.restore();
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+              const lm = results.multiHandLandmarks[0];
+              for (let i = 0; i < 21; i++) {
+                state.rawLandmarks[i].x = 1.0 - lm[i].x; // Mirrored X
+                state.rawLandmarks[i].y = lm[i].y;
+              }
+            }
+          });
+        }
+
+        mpCamera = new Camera(videoEl, {
+          onFrame: async () => {
+            if (state.cameraActive && mpHands) {
+              await mpHands.send({ image: videoEl });
+            }
+          },
+          width: 640,
+          height: 480
+        });
+
+        state.cameraActive = true;
+        await mpCamera.start();
+
+        previewBox.classList.remove('hidden');
+        btn.textContent = 'Stop Camera';
+        btn.className = 'spatial-btn px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-rose-500 hover:bg-rose-400 text-white shadow-[0_0_15px_rgba(244,63,94,0.4)] cursor-pointer';
+        modeLbl.textContent = 'CAMERA TRACKING';
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#4ade80]';
+      } catch (err) {
+        state.cameraActive = false;
+        btn.textContent = 'Camera Blocked (Sim Active)';
+      }
+    }
+
+    /*************************************************************************
+     * 4. NAVIGATION & MODE CONTROLS
+     *************************************************************************/
+    function switchMode(mode) {
+      state.mode = mode;
+      state.activeStroke = null;
+      sfx.mode();
+
+      const modes = ['draw', 'type', 'core', 'teach'];
+      modes.forEach(m => {
+        document.getElementById(`view-${m}`).classList.toggle('hidden', m !== mode);
+        const tab = document.getElementById(`tab-${m}`);
+        if (m === mode) {
+          tab.className = 'spatial-btn px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-sky-500/20 text-sky-300 border border-sky-400/50 cursor-pointer';
+        } else {
+          tab.className = 'spatial-btn px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer';
+        }
+      });
+    }
+
+    // Mode 1: Air Draw Helpers
+    function setInkColor(color, btnEl) {
+      state.inkColor = color;
+      sfx.key();
+      document.querySelectorAll('.ink-swatch').forEach(el => {
+        el.classList.remove('border-white', 'scale-110');
+        el.classList.add('border-transparent', 'opacity-80');
+        el.style.boxShadow = 'none';
+      });
+      if (btnEl) {
+        btnEl.classList.remove('border-transparent', 'opacity-80');
+        btnEl.classList.add('border-white', 'scale-110');
+        btnEl.style.boxShadow = `0 0 12px ${color}`;
+      }
+    }
+
+    function toggleSymmetry() {
+      state.symmetry = !state.symmetry;
+      const btn = document.getElementById('btn-symmetry');
+      btn.textContent = `Symmetry: ${state.symmetry ? 'ON' : 'OFF'}`;
+      btn.className = state.symmetry
+        ? 'spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-sky-500/25 text-sky-300 border border-sky-400 cursor-pointer'
+        : 'spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-slate-800/90 text-slate-200 border border-slate-700 cursor-pointer';
+      sfx.key();
+    }
+
+    function undoStroke() {
+      state.strokes.pop();
+      sfx.key();
+    }
+
+    function clearCanvas() {
+      state.strokes = [];
+      state.activeStroke = null;
+      sfx.mode();
+    }
+
+    // Mode 2: Spacious Spatial Keyboard Builder
+    const KEY_ROWS = [
+      ['1','2','3','4','5','6','7','8','9','0','*','-','+'],
+      ['Q','W','E','R','T','Y','U','I','O','P'],
+      ['A','S','D','F','G','H','J','K','L','ENTER'],
+      ['Z','X','C','V','B','N','M','SPACE','BACK','CLEAR']
+    ];
+
+    function initSpatialKeyboard() {
+      const container = document.getElementById('spatial-keyboard');
+      container.innerHTML = '';
+
+      KEY_ROWS.forEach(row => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'flex justify-center gap-2 sm:gap-2.5';
+
+        row.forEach(k => {
+          const btn = document.createElement('button');
+          btn.dataset.key = k;
+          btn.onclick = () => pressSpatialKey(k);
+
+          let sizeCls = 'min-w-[46px] sm:min-w-[60px] h-[52px] sm:h-[58px] px-2';
+          let styleCls = 'bg-slate-900/80 text-slate-100 border-slate-700/80';
+
+          if (k === 'SPACE') sizeCls = 'min-w-[140px] sm:min-w-[220px] h-[52px] sm:h-[58px] px-4';
+          else if (['ENTER', 'BACK', 'CLEAR'].includes(k)) sizeCls = 'min-w-[72px] sm:min-w-[96px] h-[52px] sm:h-[58px] px-3';
+
+          if (k === 'ENTER') styleCls = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+          else if (k === 'BACK' || k === 'CLEAR') styleCls = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+
+          btn.className = `spatial-key spatial-btn ${sizeCls} rounded-2xl border font-mono-code text-sm sm:text-base font-semibold relative flex items-center justify-center cursor-pointer ${styleCls}`;
+          btn.innerHTML = `
+            <span class="z-10 pointer-events-none">${k}</span>
+            <svg class="dwell-ring absolute inset-0 w-full h-full pointer-events-none opacity-0 transition-opacity" viewBox="0 0 60 60">
+              <circle class="dwell-circle" cx="30" cy="30" r="24" fill="none" stroke="#38bdf8" stroke-width="3"
+                stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round" />
+            </svg>
+          `;
+          rowEl.appendChild(btn);
+        });
+
+        container.appendChild(rowEl);
+      });
+    }
+    initSpatialKeyboard();
+
+    function toggleDwellMode() {
+      state.dwellEnabled = !state.dwellEnabled;
+      const btn = document.getElementById('btn-dwell-toggle');
+      btn.textContent = `Dwell Auto-Type: ${state.dwellEnabled ? 'ON (0.5s)' : 'OFF'}`;
+      btn.className = state.dwellEnabled
+        ? 'spatial-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono-code font-medium bg-sky-500/20 text-sky-300 border border-sky-400/40 cursor-pointer'
+        : 'spatial-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-mono-code font-medium bg-slate-800 text-slate-400 border border-slate-700 cursor-pointer';
+    }
+
+    function pressSpatialKey(k) {
+      const now = performance.now();
+      if (now - state.lastKeyTime < 220) return;
+      state.lastKeyTime = now;
+      sfx.key();
+
+      const resp = document.getElementById('type-response-badge');
+
+      if (k === 'BACK') {
+        state.typedText = state.typedText.slice(0, -1);
+      } else if (k === 'CLEAR') {
+        state.typedText = '';
+        resp.textContent = 'Buffer cleared.';
+      } else if (k === 'SPACE') {
+        state.typedText += ' ';
+      } else if (k === 'ENTER') {
+        const cmd = state.typedText.trim().toUpperCase();
+        if (cmd === 'CLEAR') {
+          state.typedText = '';
+          resp.textContent = 'Workspace terminal cleared.';
+        } else if (cmd.includes('JARVIS') || cmd.includes('HELLO')) {
+          resp.textContent = 'J.A.R.V.I.S.: "Spatial telemetry online, Sir. All systems nominal."';
+        } else if (/^[0-9+\-*/.\s]+$/.test(cmd) && cmd.length > 0) {
+          try {
+            const val = Function(`"use strict"; return (${cmd})`)();
+            resp.textContent = `MATH RESULT: ${cmd} = ${val}`;
+            state.typedText = String(val);
+          } catch (e) {
+            resp.textContent = `Executed: "${cmd}"`;
+          }
+        } else {
+          resp.textContent = `Command logged: "${cmd || 'EMPTY'}"`;
+        }
+      } else {
+        if (state.typedText.length < 36) state.typedText += k;
+      }
+
+      document.getElementById('typed-output').textContent = state.typedText;
+    }
+
+    // Mode 3: 3D Core Controls
+    function setCoreShape(shape) {
+      state.coreShape = shape;
+      sfx.mode();
+      ['reactor', 'tesseract', 'sphere'].forEach(s => {
+        const btn = document.getElementById(`btn-shape-${s}`);
+        btn.className = s === shape
+          ? 'spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-sky-500/25 text-sky-300 border border-sky-400 cursor-pointer'
+          : 'spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-slate-800/80 text-slate-300 border border-slate-700 cursor-pointer';
+      });
+    }
+
+    function toggleAutoSpin() {
+      state.autoSpin = !state.autoSpin;
+      const btn = document.getElementById('btn-autospin');
+      btn.textContent = `Auto-Spin: ${state.autoSpin ? 'ON' : 'OFF'}`;
+      btn.className = state.autoSpin
+        ? 'spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-pointer'
+        : 'spatial-btn px-4 py-2 rounded-full text-xs sm:text-sm font-medium bg-slate-800/80 text-slate-400 border border-slate-700 cursor-pointer';
+      sfx.key();
+    }
+
+    // Mode 4: LERP Alpha Slider
+    function updateAlpha(val) {
+      state.lerpAlpha = parseFloat(val);
+      document.getElementById('teach-alpha-badge').textContent = `α = ${state.lerpAlpha.toFixed(2)}`;
+    }
+
+    /*************************************************************************
+     * 5. CANVAS RENDERING & SPATIAL HIT-TESTING
+     *************************************************************************/
+    const canvas = document.getElementById('holo-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Mouse / Touch / Spacebar Input Listeners
+    window.addEventListener('mousemove', (e) => {
+      state.mouseX = e.clientX / window.innerWidth;
+      state.mouseY = e.clientY / window.innerHeight;
+    });
+    window.addEventListener('mousedown', (e) => {
+      if (e.target.tagName !== 'INPUT') state.mouseDown = true;
+    });
+    window.addEventListener('mouseup', () => { state.mouseDown = false; });
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        state.mouseX = e.touches[0].clientX / window.innerWidth;
+        state.mouseY = e.touches[0].clientY / window.innerHeight;
+        state.mouseDown = true;
+      }
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        state.mouseX = e.touches[0].clientX / window.innerWidth;
+        state.mouseY = e.touches[0].clientY / window.innerHeight;
+      }
+    }, { passive: true });
+    window.addEventListener('touchend', () => { state.mouseDown = false; });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') state.mouseDown = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') state.mouseDown = false;
+    });
+
+    // Hit-test all `.spatial-btn` elements with the hand cursor
+    function handleSpatialUIHits(now) {
+      const sx = state.cursorX * window.innerWidth;
+      const sy = state.cursorY * window.innerHeight;
+      let overAnyButton = false;
+
+      // 1. Check Spatial Keyboard Keys in Mode 2
+      if (state.mode === 'type') {
+        let currentKey = null;
+        document.querySelectorAll('.spatial-key').forEach(btn => {
+          const r = btn.getBoundingClientRect();
+          const hit = sx >= r.left && sx <= r.right && sy >= r.top && sy <= r.bottom;
+          const ringSvg = btn.querySelector('.dwell-ring');
+          const circle = btn.querySelector('.dwell-circle');
+
+          if (hit) {
+            overAnyButton = true;
+            currentKey = btn.dataset.key;
+            btn.classList.add('hand-hover');
+
+            if (state.isPinching && !state.wasPinching) {
+              pressSpatialKey(currentKey);
+              state.hoverStart = now;
+            } else if (state.dwellEnabled) {
+              if (state.hoveredKey !== currentKey) {
+                state.hoveredKey = currentKey;
+                state.hoverStart = now;
+              }
+              const elapsed = now - state.hoverStart;
+              const progress = Math.min(1, elapsed / 500);
+              ringSvg.classList.remove('opacity-0');
+              circle.style.strokeDashoffset = String(150.8 * (1 - progress));
+
+              if (elapsed >= 500) {
+                pressSpatialKey(currentKey);
+                state.hoverStart = now + 220;
+              }
+            }
+          } else {
+            btn.classList.remove('hand-hover');
+            ringSvg.classList.add('opacity-0');
+            circle.style.strokeDashoffset = '150.8';
+          }
+        });
+        if (!currentKey) state.hoveredKey = null;
+      }
+
+      // 2. Check general `.spatial-btn` buttons across top/bottom bars
+      document.querySelectorAll('.spatial-btn:not(.spatial-key)').forEach(btn => {
+        if (btn.offsetParent === null) return;
+        const r = btn.getBoundingClientRect();
+        const hit = sx >= r.left && sx <= r.right && sy >= r.top && sy <= r.bottom;
+        if (hit) {
+          overAnyButton = true;
+          btn.classList.add('hand-hover');
+          if (state.isPinching && !state.wasPinching && now - state.lastBtnClick > 300) {
+            state.lastBtnClick = now;
+            btn.click();
+          }
+        } else {
+          btn.classList.remove('hand-hover');
+        }
+      });
+
+      return overAnyButton;
+    }
+
+    // Mode 1: Render & Record Air Draw Strokes
+    function renderAirDraw(overUI) {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      if (state.mode === 'draw' && state.isPinching && !overUI) {
+        if (!state.activeStroke) {
+          state.activeStroke = {
+            color: state.inkColor,
+            symmetry: state.symmetry,
+            pts: []
+          };
+          state.strokes.push(state.activeStroke);
+        }
+        const pts = state.activeStroke.pts;
+        const last = pts[pts.length - 1];
+        if (!last || Math.hypot(state.cursorX - last.x, state.cursorY - last.y) > 0.002) {
+          pts.push({ x: state.cursorX, y: state.cursorY });
+        }
+      } else {
+        state.activeStroke = null;
+      }
+
+      if (state.mode !== 'draw') return;
+
+      const drawCurve = (pts, color) => {
+        if (pts.length < 2) return;
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 5;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 14;
+
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x * w, pts[0].y * h);
+        for (let i = 1; i < pts.length - 1; i++) {
+          const mx = ((pts[i].x + pts[i + 1].x) * 0.5) * w;
+          const my = ((pts[i].y + pts[i + 1].y) * 0.5) * h;
+          ctx.quadraticCurveTo(pts[i].x * w, pts[i].y * h, mx, my);
+        }
+        const last = pts[pts.length - 1];
+        ctx.lineTo(last.x * w, last.y * h);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      state.strokes.forEach(s => {
+        if (!s.symmetry) {
+          drawCurve(s.pts, s.color);
+        } else {
+          for (let k = 0; k < 6; k++) {
+            const ang = (k / 6) * Math.PI * 2;
+            const c = Math.cos(ang), sn = Math.sin(ang);
+            const rPts = s.pts.map(p => {
+              const dx = p.x - 0.5, dy = p.y - 0.5;
+              return { x: 0.5 + (dx * c - dy * sn), y: 0.5 + (dx * sn + dy * c) };
+            });
+            drawCurve(rPts, s.color);
+          }
+        }
+      });
+    }
+
+    // Mode 3: Render Clean 3D Core Hologram
+    function render3DCore(timeSec) {
+      if (state.mode !== 'core') return;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+
+      // Smoothly map hand cursor to rotation
+      const targetY = (state.cursorX - 0.5) * Math.PI * 2.2 + (state.autoSpin ? timeSec * 0.5 : 0);
+      const targetX = (state.cursorY - 0.5) * Math.PI * 1.8;
+      state.rotY += (targetY - state.rotY) * 0.1;
+      state.rotX += (targetX - state.rotX) * 0.1;
+
+      const targetScale = state.isPinching ? 1.32 : 1.0;
+      state.coreScale += (targetScale - state.coreScale) * 0.12;
+
+      const radius = Math.min(w, h) * 0.23 * state.coreScale;
+
+      const project = (x, y, z) => {
+        const y1 = y * Math.cos(state.rotX) - z * Math.sin(state.rotX);
+        const z1 = y * Math.sin(state.rotX) + z * Math.cos(state.rotX);
+        const x2 = x * Math.cos(state.rotY) + z1 * Math.sin(state.rotY);
+        const z2 = -x * Math.sin(state.rotY) + z1 * Math.cos(state.rotY);
+        const p = 4.5 / (4.5 + z2 + 2.2);
+        return { x: cx + x2 * radius * p, y: cy + y1 * radius * p };
+      };
+
+      ctx.save();
+      const primaryColor = state.isPinching ? '#facc15' : '#38bdf8';
+      ctx.strokeStyle = primaryColor;
+      ctx.shadowColor = primaryColor;
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 2;
+
+      if (state.coreShape === 'reactor') {
+        const rings = [
+          { r: 1.3, z: -0.25, segs: 20 },
+          { r: 0.95, z: 0.0, segs: 14 },
+          { r: 0.55, z: 0.25, segs: 8 }
+        ];
+        rings.forEach(ring => {
+          ctx.beginPath();
+          for (let i = 0; i <= ring.segs; i++) {
+            const a = (i / ring.segs) * Math.PI * 2;
+            const pt = project(Math.cos(a) * ring.r, Math.sin(a) * ring.r, ring.z);
+            if (i === 0) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.stroke();
+        });
+      } else if (state.coreShape === 'tesseract') {
+        const verts = [];
+        for (let i = 0; i < 16; i++) {
+          const s = ( i & 8 ) ? 0.65 : 1.25;
+          verts.push(project(
+            ((i & 1) ? 1 : -1) * s,
+            ((i & 2) ? 1 : -1) * s,
+            ((i & 4) ? 1 : -1) * s
+          ));
+        }
+        for (let i = 0; i < 16; i++) {
+          for (let j = i + 1; j < 16; j++) {
+            const d = i ^ j;
+            if ((d & (d - 1)) === 0) {
+              ctx.beginPath();
+              ctx.moveTo(verts[i].x, verts[i].y);
+              ctx.lineTo(verts[j].x, verts[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+      } else {
+        // Holo Sphere
+        for (let i = 1; i < 7; i++) {
+          const lat = (i / 7) * Math.PI;
+          const r = Math.sin(lat) * 1.25;
+          const z = Math.cos(lat) * 1.25;
+          ctx.beginPath();
+          for (let j = 0; j <= 16; j++) {
+            const lon = (j / 16) * Math.PI * 2;
+            const pt = project(Math.cos(lon) * r, Math.sin(lon) * r, z);
+            if (j === 0) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Render Clean 21-Point Hand Skeleton & Pinch Cursor
+    function renderHandSkeleton() {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.save();
+      ctx.strokeStyle = state.isPinching ? 'rgba(250, 204, 21, 0.65)' : 'rgba(56, 189, 248, 0.45)';
+      ctx.lineWidth = 2;
+
+      HAND_BONES.forEach(([a, b]) => {
+        const p1 = state.smoothLandmarks[a];
+        const p2 = state.smoothLandmarks[b];
+        ctx.beginPath();
+        ctx.moveTo(p1.x * w, p1.y * h);
+        ctx.lineTo(p2.x * w, p2.y * h);
+        ctx.stroke();
+      });
+
+      // Joint dots
+      state.smoothLandmarks.forEach((lm, idx) => {
+        const isFocus = idx === 4 || idx === 8;
+        ctx.fillStyle = isFocus ? (state.isPinching ? '#facc15' : '#38bdf8') : 'rgba(226, 232, 240, 0.7)';
+        ctx.beginPath();
+        ctx.arc(lm.x * w, lm.y * h, isFocus ? 5.5 : 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Dynamic Pinch Line between Thumb Tip (LM 4) & Index Tip (LM 8)
+      const lm4 = state.smoothLandmarks[4];
+      const lm8 = state.smoothLandmarks[8];
+      ctx.strokeStyle = state.isPinching ? '#facc15' : 'rgba(56, 189, 248, 0.6)';
+      ctx.lineWidth = state.isPinching ? 2.5 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(lm4.x * w, lm4.y * h);
+      ctx.lineTo(lm8.x * w, lm8.y * h);
+      ctx.stroke();
+
+      // Glowing Midpoint Spatial Cursor
+      const cx = state.cursorX * w;
+      const cy = state.cursorY * h;
+      const cursorColor = state.isPinching ? '#facc15' : '#38bdf8';
+
+      ctx.fillStyle = cursorColor;
+      ctx.shadowColor = cursorColor;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.arc(cx, cy, state.isPinching ? 7 : 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = cursorColor;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, state.isPinching ? 13 : 18, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /*************************************************************************
+     * 6. MAIN 60 FPS LOOP
+     *************************************************************************/
+    let frames = 0;
+    let lastFpsTick = performance.now();
+
+    function loop(now) {
+      frames++;
+      if (now - lastFpsTick >= 500) {
+        const fps = Math.min(60, Math.round((frames * 1000) / (now - lastFpsTick)));
+        document.getElementById('fps-counter').textContent = `${fps} FPS`;
+        frames = 0;
+        lastFpsTick = now;
+      }
+
+      if (!state.cameraActive) {
+        updateSimulatedHand(state.mouseX, state.mouseY, state.mouseDown);
+      }
+
+      stepKinematics();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const overUI = handleSpatialUIHits(now);
+      renderAirDraw(overUI);
+      render3DCore(now * 0.001);
+      renderHandSkeleton();
+
+      requestAnimationFrame(loop);
+    }
+
+    window.onload = () => {
+      resizeCanvas();
+      requestAnimationFrame(loop);
+    };
+  </script>
+</body>
+</html>
