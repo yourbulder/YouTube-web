@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#06111d" />
+<title>HoloVision — 3D Object Studio</title>
+<style>
+:root{--bg:#06111d;--panel:#0b1b2a;--panel2:#0e2233;--line:rgba(90,220,255,.18);--cyan:#61e8ff;--blue:#7a9fff;--text:#e8f7ff;--muted:#8ba5b8;--green:#7dffc5;--red:#ff8e9b}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(ellipse at 50% -20%,#163b50 0%,#071522 48%,#030811 100%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}body{padding:18px}button,input{font:inherit}.app{max-width:1500px;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;border:1px solid #61e8ff66;background:linear-gradient(145deg,#61e8ff25,#4779ff12);color:var(--cyan);font-size:25px;box-shadow:0 0 24px #61e8ff18}.brand h1{font-size:17px;letter-spacing:.18em;margin:0}.brand small{display:block;font-size:9px;letter-spacing:.24em;color:var(--muted);margin-top:4px}.topright{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:10px;letter-spacing:.1em}.pill{border:1px solid var(--line);padding:8px 11px;border-radius:999px;background:#091a29}.dot{display:inline-block;width:7px;height:7px;background:#536b7b;border-radius:50%;margin-right:7px}.dot.on{background:var(--green);box-shadow:0 0 10px var(--green)}
+.grid{display:grid;grid-template-columns:minmax(320px, .88fr) minmax(420px,1.35fr);gap:15px;align-items:stretch}.card{border:1px solid var(--line);border-radius:18px;background:linear-gradient(155deg,#0c2131ed,#071522f2);box-shadow:0 18px 55px #0005;overflow:hidden;min-width:0}.cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px;border-bottom:1px solid #ffffff0c}.kicker{font-size:10px;letter-spacing:.17em;color:#b6d9e8;font-weight:750}.tiny{font-size:10px;color:var(--muted)}.cameraArea{padding:14px}.camview{height:290px;position:relative;border-radius:12px;overflow:hidden;background:radial-gradient(circle,#14384b,#06111b 70%);border:1px solid #5bdfff2c}.camview video{width:100%;height:100%;object-fit:contain;display:none;background:#02070c}.camplaceholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted)}.orb{width:75px;height:75px;border:1px solid #61e8ff80;border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-size:30px;box-shadow:0 0 30px #61e8ff20,inset 0 0 24px #61e8ff12;margin-bottom:14px;position:relative}.orb:after{content:"";position:absolute;inset:-8px;border:1px dashed #61e8ff55;border-radius:50%;animation:spin 14s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.camplaceholder b{font-size:14px;color:#dff8ff;margin-bottom:5px}.camplaceholder span{font-size:11px;line-height:1.6;max-width:330px}.cameraActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}.btn{border:1px solid #61e8ff3b;background:#112d40;color:#dff9ff;border-radius:10px;padding:10px 12px;font-size:10px;letter-spacing:.06em;font-weight:700;cursor:pointer;transition:.18s}.btn:hover{border-color:var(--cyan);box-shadow:0 0 16px #61e8ff17;transform:translateY(-1px)}.btn.primary{background:linear-gradient(110deg,#12677b,#1b5687);border-color:#61e8ff90}.btn.ghost{background:#0a1b29}.btn:disabled{opacity:.42;cursor:not-allowed;transform:none;box-shadow:none}.gallery{display:flex;gap:8px;overflow-x:auto;padding:11px 14px 14px;min-height:78px;border-top:1px solid #ffffff0b}.thumb{position:relative;flex:0 0 64px;height:54px;border:1px solid #61e8ff35;border-radius:8px;overflow:hidden;background:#07111c;cursor:pointer}.thumb img{width:100%;height:100%;object-fit:cover}.thumb.selected{outline:2px solid var(--cyan);outline-offset:1px}.thumb em{position:absolute;bottom:2px;right:4px;font-style:normal;background:#06111de0;color:#d9faff;font-size:8px;padding:2px 4px;border-radius:4px}.emptygallery{font-size:10px;color:#7792a4;align-self:center;line-height:1.4}.instructions{padding:0 14px 14px;color:#8ba5b8;font-size:10px;line-height:1.55}.viewerWrap{padding:12px}.viewer{height:450px;border-radius:13px;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#102a3b,#030911 72%);border:1px solid #61e8ff2e}.viewer canvas{display:block;width:100%;height:100%}.viewerOverlay{position:absolute;left:13px;top:12px;pointer-events:none;font-size:9px;letter-spacing:.14em;color:#8cb8cb;text-shadow:0 2px 5px #000}.viewerBottom{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:9px;color:var(--muted);font-size:9px;letter-spacing:.08em}.modelActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.subgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.controlbox{background:#081a28;border:1px solid #ffffff0d;border-radius:12px;padding:12px}.controlbox h3{margin:0 0 10px;font-size:9px;letter-spacing:.15em;color:#a9cbd9}.slider{margin:9px 0}.slider label{display:flex;justify-content:space-between;font-size:10px;color:#9bb4c4;margin-bottom:6px}.slider input{width:100%;accent-color:var(--cyan)}.status{font-size:10px;line-height:1.5;color:var(--muted);margin-top:10px;min-height:17px}.status.good{color:var(--green)}.status.bad{color:var(--red)}.disclaimer{margin-top:14px;padding:12px 14px;border:1px solid #ffcf7040;border-radius:12px;background:#3a2c1118;color:#cdbd9d;font-size:10px;line-height:1.6}.disclaimer b{color:#ffdf9b}.foot{padding:16px 4px;text-align:center;font-size:9px;color:#5f7a8c;line-height:1.6}.link{color:#8deeff;text-decoration:none}.link:hover{text-decoration:underline}.hidden{display:none!important}
+@media(max-width:950px){body{padding:11px}.grid{grid-template-columns:1fr}.viewer{height:400px}.camview{height:300px}}@media(max-width:540px){.top{align-items:flex-start}.topright{font-size:8px}.brand h1{font-size:15px}.grid{gap:11px}.camview{height:245px}.viewer{height:340px}.subgrid{grid-template-columns:1fr}.cameraActions .btn,.modelActions .btn{flex:1}.viewerBottom{font-size:8px}}
+</style>
+</head>
+<body>
+<div class="app">
+ <header class="top">
+  <div class="brand"><div class="logo">⌁</div><div><h1>HOLOVISION</h1><small>3D OBJECT STUDIO · SCAN / PREVIEW / EXPORT</small></div></div>
+  <div class="topright"><span class="pill"><i class="dot" id="camDot"></i><span id="camLabel">CAMERA OFF</span></span><span class="pill" id="modelState">NO 3D MODEL</span></div>
+ </header>
+ <main class="grid">
+  <section class="card">
+   <div class="cardhead"><span class="kicker">01 / CAPTURE OBJECT</span><span class="tiny" id="photoCount">0 PHOTOS</span></div>
+   <div class="cameraArea">
+    <div class="camview">
+     <video id="video" playsinline muted></video>
+     <div class="camplaceholder" id="camPlaceholder"><div class="orb">⌖</div><b>Camera is ready</b><span>Start your camera and place one object in the centre. Use a plain, well-lit background for the cleanest result.</span></div>
+    </div>
+    <div class="cameraActions">
+     <button class="btn primary" id="startCamera">START CAMERA</button>
+     <button class="btn" id="takePhoto" disabled>CAPTURE ANGLE</button>
+     <button class="btn" id="switchCamera" disabled>SWITCH</button>
+     <button class="btn ghost" id="stopCamera" disabled>STOP</button>
+    </div>
+    <div class="cameraActions">
+     <button class="btn" id="uploadPhoto">UPLOAD PHOTO</button>
+     <button class="btn" id="downloadSet" disabled>EXPORT PHOTO SET (.ZIP)</button>
+     <input class="hidden" id="photoInput" type="file" accept="image/*" />
+    </div>
+   </div>
+   <div class="cardhead"><span class="kicker">CAPTURED ANGLES</span><span class="tiny">Select one for quick AI mesh</span></div>
+   <div class="gallery" id="gallery"><div class="emptygallery">No photos yet. Capture the front, sides, back, and top as you move around the object.</div></div>
+   <div class="instructions">For a real multi-view scan, keep the object still on a turntable and take 30–70 overlapping photos around it at two or more heights. Keep lighting and distance steady. Shiny, transparent, or plain objects are harder to reconstruct.</div>
+   <div style="padding:0 14px 14px"><button class="btn primary" id="build3d" disabled>GENERATE QUICK 3D MESH FROM SELECTED PHOTO</button><div class="status" id="aiStatus">AI depth model has not been loaded. The first run downloads the model and needs internet access.</div></div>
+  </section>
+  <section class="card">
+   <div class="cardhead"><span class="kicker">02 / 3D HOLOGRAM VIEWPORT</span><span class="tiny" id="meshInfo">WAITING FOR MODEL</span></div>
+   <div class="viewerWrap">
+    <div class="viewer" id="viewer"><div class="viewerOverlay">LIVE 3D VIEW · DRAG TO ORBIT · SCROLL TO ZOOM</div></div>
+    <div class="viewerBottom"><span id="viewStatus">NO MODEL LOADED</span><span>WEBGL · THREE.JS</span></div>
+    <div class="modelActions">
+     <button class="btn primary" id="exportGlb" disabled>DOWNLOAD .GLB</button>
+     <button class="btn" id="importGlb">IMPORT .GLB</button>
+     <button class="btn" id="wireBtn" disabled>HOLOGRAM WIREFRAME: OFF</button>
+     <button class="btn" id="resetModel" disabled>RESET VIEW</button>
+     <input class="hidden" id="glbInput" type="file" accept=".glb,model/gltf-binary" />
+    </div>
+    <div class="subgrid">
+     <div class="controlbox"><h3>MOVE MODEL</h3>
+      <div class="slider"><label><span>Horizontal X</span><b id="xVal">0.00</b></label><input id="moveX" type="range" min="-2" max="2" step="0.01" value="0"></div>
+      <div class="slider"><label><span>Vertical Y</span><b id="yVal">0.00</b></label><input id="moveY" type="range" min="-2" max="2" step="0.01" value="0"></div>
+      <div class="slider"><label><span>Depth Z</span><b id="zVal">0.00</b></label><input id="moveZ" type="range" min="-2" max="2" step="0.01" value="0"></div>
+     </div>
+     <div class="controlbox"><h3>ROTATE & SCALE</h3>
+      <div class="slider"><label><span>Rotate Y</span><b id="rotVal">0°</b></label><input id="rotateY" type="range" min="-180" max="180" step="1" value="0"></div>
+      <div class="slider"><label><span>Scale</span><b id="scaleVal">1.00×</b></label><input id="scale" type="range" min="0.2" max="3" step="0.01" value="1"></div>
+      <div class="slider"><label><span>Depth relief</span><b id="depthVal">0.70</b></label><input id="depthScale" type="range" min="0.05" max="1.8" step="0.05" value="0.7"></div>
+     </div>
+    </div>
+    <div class="disclaimer"><b>Important accuracy note:</b> Quick AI mesh uses one image plus estimated depth. It creates a textured, movable 2.5D surface—not a complete 360° object with a genuinely scanned back side. For a full model, use the multi-photo set with photogrammetry, then import the resulting GLB here.</div>
+   </div>
+  </section>
+ </main>
+ <div class="foot">Your captured photos are processed in this browser by the AI model. The first model download is large. Camera access requires HTTPS or localhost; opening this file directly may block camera access. <br><a class="link" href="https://crispstrobe.github.io/CrispMesh/" target="_blank" rel="noopener">Open experimental multi-photo photogrammetry tool</a> · <a class="link" href="https://tomosud.github.io/Image_to_Mesh_web/" target="_blank" rel="noopener">Open single-image MoGe-2 mesh tool</a></div>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+import { GLTFExporter } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/exporters/GLTFExporter.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
+import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
+
+const $ = id => document.getElementById(id);
+const video=$('video'), gallery=$('gallery');
+let stream=null, facing='environment', photos=[], selected=-1, depthEstimator=null, currentModel=null, wire=null, renderer, scene, camera, orbit, raf=0;
+let originalModelTransform=null;
+
+function status(message,kind=''){ $('aiStatus').textContent=message; $('aiStatus').className='status '+kind; }
+function setCameraState(on){$('camDot').classList.toggle('on',on);$('camLabel').textContent=on?'CAMERA LIVE':'CAMERA OFF';$('camPlaceholder').classList.toggle('hidden',on);video.style.display=on?'block':'none';}
+function init3D(){
+ const host=$('viewer');
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x030a12);
+ camera=new THREE.PerspectiveCamera(42,host.clientWidth/host.clientHeight,.01,100);camera.position.set(0,1.3,4.2);
+ renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(host.clientWidth,host.clientHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;host.appendChild(renderer.domElement);
+ orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.target.set(0,0.15,0);orbit.minDistance=1;orbit.maxDistance=12;
+ scene.add(new THREE.HemisphereLight(0x9edfff,0x06121b,2.1));
+ const key=new THREE.DirectionalLight(0xc4f5ff,2.2);key.position.set(3,5,4);scene.add(key);
+ const rim=new THREE.PointLight(0x23ccff,17,8);rim.position.set(-2,1.8,-1.5);scene.add(rim);
+ const grid=new THREE.GridHelper(8,32,0x1b7288,0x123244);grid.position.y=-1.25;scene.add(grid);
+ const axes=new THREE.AxesHelper(.45);axes.position.set(-1.8,-1.24,0);scene.add(axes);
+ const resize=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);};
+ new ResizeObserver(resize).observe(host);
+ function loop(){raf=requestAnimationFrame(loop);orbit.update();renderer.render(scene,camera);}loop();
+}
+init3D();
+
+async function startCamera(){
+ try{
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}}});
+  video.srcObject=stream;await video.play();setCameraState(true);
+  $('takePhoto').disabled=false;$('switchCamera').disabled=false;$('stopCamera').disabled=false;
+ }catch(e){status('Camera could not start: '+(e.message||e)+'. Use HTTPS/localhost and allow camera permission.','bad');}
+}
+function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.pause();video.srcObject=null;setCameraState(false);$('takePhoto').disabled=true;$('switchCamera').disabled=true;$('stopCamera').disabled=true;}
+function addPhoto(blob,name='capture'){
+ const url=URL.createObjectURL(blob);photos.push({blob,url,name:name+'_'+String(photos.length+1).padStart(2,'0')+'.jpg'});selected=photos.length-1;renderGallery();$('build3d').disabled=false;$('downloadSet').disabled=false;
+}
+function renderGallery(){
+ $('photoCount').textContent=photos.length+' PHOTO'+(photos.length===1?'':'S');gallery.innerHTML='';
+ if(!photos.length){gallery.innerHTML='<div class="emptygallery">No photos yet. Capture the front, sides, back, and top as you move around the object.</div>';return;}
+ photos.forEach((p,i)=>{const b=document.createElement('button');b.className='thumb'+(i===selected?' selected':'');b.title='Select angle '+(i+1);b.innerHTML=`<img src="${p.url}" alt="Captured view ${i+1}"><em>${i+1}</em>`;b.addEventListener('click',()=>{selected=i;renderGallery();});gallery.appendChild(b);});
+}
+$('startCamera').addEventListener('click',startCamera);$('stopCamera').addEventListener('click',stopCamera);
+$('switchCamera').addEventListener('click',async()=>{facing=facing==='environment'?'user':'environment';await startCamera();});
+$('takePhoto').addEventListener('click',()=>{if(!video.videoWidth)return;const c=document.createElement('canvas');const max=1500,scale=Math.min(1,max/video.videoWidth);c.width=Math.round(video.videoWidth*scale);c.height=Math.round(video.videoHeight*scale);c.getContext('2d').drawImage(video,0,0,c.width,c.height);c.toBlob(blob=>{if(blob)addPhoto(blob,'camera');},'image/jpeg',.93);});
+$('uploadPhoto').addEventListener('click',()=>$('photoInput').click());
+$('photoInput').addEventListener('change',async e=>{for(const f of [...e.target.files]){if(f.type.startsWith('image/'))addPhoto(f,f.name.replace(/\.[^.]+$/,''));}e.target.value='';});
+$('downloadSet').addEventListener('click',async()=>{if(!photos.length)return;status('Packing the multi-angle photo set…');try{const zip=new JSZip();photos.forEach((p,i)=>zip.file(`photos/${String(i+1).padStart(3,'0')}.jpg`,p.blob));zip.file('capture-notes.txt','Multi-angle object capture. Keep the object still and capture overlapping views around it from multiple heights. This ZIP contains the original captured images.');const blob=await zip.generateAsync({type:'blob'});downloadBlob(blob,'HoloVision_Photo_Set.zip');status('Photo set exported. Use it with a multi-view photogrammetry pipeline.','good');}catch(e){status('Could not create ZIP: '+e.message,'bad');}});
+
+async function loadDepthEstimator(){
+ if(depthEstimator)return depthEstimator;
+ status('Loading AI depth model. First run downloads model files; this may take a while…');
+ const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+ env.allowLocalModels=false;env.useBrowserCache=true;
+ depthEstimator=await pipeline('depth-estimation','onnx-community/depth-anything-v2-small');
+ return depthEstimator;
+}
+function imageFromUrl(url){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=url;});}
+function buildGeometry(depthData,dw,dh,img,relief){
+ const maxSide=180, factor=Math.min(1,maxSide/Math.max(dw,dh));const nx=Math.max(32,Math.round(dw*factor)),ny=Math.max(32,Math.round(dh*factor));
+ const texCanvas=document.createElement('canvas');texCanvas.width=nx;texCanvas.height=ny;const tx=texCanvas.getContext('2d');tx.drawImage(img,0,0,nx,ny);
+ const tex=new THREE.CanvasTexture(texCanvas);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=4;tex.needsUpdate=true;
+ const sampled=new Float32Array(nx*ny);let min=Infinity,max=-Infinity;
+ for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){const sx=Math.min(dw-1,Math.floor(x/(nx-1)*(dw-1)));const sy=Math.min(dh-1,Math.floor(y/(ny-1)*(dh-1)));const v=Number(depthData[sy*dw+sx]);sampled[y*nx+x]=v;if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}
+ const range=Math.max(1e-6,max-min),positions=new Float32Array(nx*ny*3),uvs=new Float32Array(nx*ny*2),indices=[];
+ const aspect=img.width/img.height, worldH=2.45,worldW=worldH*aspect;
+ for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+  const i=y*nx+x,raw=sampled[i],z=Number.isFinite(raw)?((raw-min)/range)*relief:0;
+  positions[i*3]=(x/(nx-1)-.5)*worldW;positions[i*3+1]=(.5-y/(ny-1))*worldH;positions[i*3+2]=z;
+  uvs[i*2]=x/(nx-1);uvs[i*2+1]=1-y/(ny-1);
+ }
+ for(let y=0;y<ny-1;y++)for(let x=0;x<nx-1;x++){const a=y*nx+x,b=a+1,c=a+nx,d=c+1;indices.push(a,c,b,b,c,d);}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('uv',new THREE.BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();
+ const mat=new THREE.MeshStandardMaterial({map:tex,roughness:.82,metalness:.04,side:THREE.DoubleSide});
+ return {geometry:geo,material:mat,texture:tex,vertices:nx*ny,faces:indices.length/3};
+}
+function clearModel(){if(!currentModel)return;scene.remove(currentModel);currentModel.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{if(m.map)m.map.dispose();m.dispose();});}});currentModel=null;wire=null;}
+function installMesh(meshObj,label='AI_DEPTH_RELIEF'){
+ clearModel();currentModel=new THREE.Group();currentModel.name=label;
+ const mesh=new THREE.Mesh(meshObj.geometry,meshObj.material);mesh.name='TexturedDepthMesh';mesh.castShadow=true;mesh.receiveShadow=true;currentModel.add(mesh);currentModel.position.set(0,0,0);scene.add(currentModel);
+ camera.position.set(0,.4,3.8);orbit.target.set(0,0,0);orbit.update();originalModelTransform={position:[0,0,0],rotation:0,scale:1};
+ $('modelState').textContent='3D MODEL READY';$('meshInfo').textContent=`${meshObj.vertices.toLocaleString()} VERTICES · ${meshObj.faces.toLocaleString()} FACES`;$('viewStatus').textContent='MODEL LOADED · DRAG TO ROTATE';
+ ['exportGlb','wireBtn','resetModel'].forEach(id=>$(id).disabled=false);
+ $('moveX').value=0;$('moveY').value=0;$('moveZ').value=0;$('rotateY').value=0;$('scale').value=1;syncTransformLabels();
+}
+$('build3d').addEventListener('click',async()=>{
+ if(selected<0||!photos[selected])return;
+ $('build3d').disabled=true;
+ try{
+  status('Preparing selected photo…');const img=await imageFromUrl(photos[selected].url);
+  const estimator=await loadDepthEstimator();status('Estimating depth from image on this device…');
+  const out=await estimator(photos[selected].url);
+  const tensor=out.predicted_depth; if(!tensor?.data||!tensor?.dims)throw new Error('Depth model did not return a usable depth map.');
+  const dims=tensor.dims;const dh=dims[dims.length-2],dw=dims[dims.length-1];
+  const mesh=buildGeometry(tensor.data,dw,dh,img,Number($('depthScale').value));installMesh(mesh,'HOLOVISION_AI_DEPTH_MESH');
+  status('3D relief mesh created. You can orbit, move, scale, and export it as GLB.','good');
+ }catch(e){console.error(e);status('3D generation failed: '+(e?.message||String(e))+'. Try Chrome or Edge on a computer with WebGPU/WebAssembly support.','bad');}
+ finally{$('build3d').disabled=photos.length===0;}
+});
+
+function syncTransformLabels(){const vals={moveX:'xVal',moveY:'yVal',moveZ:'zVal',rotateY:'rotVal',scale:'scaleVal'};for(const [id,out] of Object.entries(vals)){const v=Number($(id).value);$(out).textContent=id==='rotateY'?`${v.toFixed(0)}°`:id==='scale'?`${v.toFixed(2)}×`:v.toFixed(2);}if(currentModel){currentModel.position.set(Number($('moveX').value),Number($('moveY').value),Number($('moveZ').value));currentModel.rotation.y=THREE.MathUtils.degToRad(Number($('rotateY').value));const s=Number($('scale').value);currentModel.scale.setScalar(s);}}
+['moveX','moveY','moveZ','rotateY','scale'].forEach(id=>$(id).addEventListener('input',syncTransformLabels));
+$('depthScale').addEventListener('change',()=>{if(currentModel&&currentModel.name==='HOLOVISION_AI_DEPTH_MESH')status('Depth relief strength changes on the next AI mesh generation.','');});
+$('wireBtn').addEventListener('click',()=>{if(!currentModel)return;if(wire){currentModel.remove(wire);wire.geometry.dispose();wire.material.dispose();wire=null;$('wireBtn').textContent='HOLOGRAM WIREFRAME: OFF';}else{const m=currentModel.children.find(o=>o.isMesh);if(!m)return;wire=new THREE.LineSegments(new THREE.WireframeGeometry(m.geometry),new THREE.LineBasicMaterial({color:0x52eaff,transparent:true,opacity:.68}));wire.name='HologramWireframe';wire.scale.copy(m.scale);wire.position.copy(m.position);wire.rotation.copy(m.rotation);currentModel.add(wire);$('wireBtn').textContent='HOLOGRAM WIREFRAME: ON';}});
+$('resetModel').addEventListener('click',()=>{if(!currentModel)return;$('moveX').value=0;$('moveY').value=0;$('moveZ').value=0;$('rotateY').value=0;$('scale').value=1;syncTransformLabels();camera.position.set(0,.4,3.8);orbit.target.set(0,0,0);orbit.update();});
+$('exportGlb').addEventListener('click',()=>{if(!currentModel)return;status('Exporting GLB…');const exporter=new GLTFExporter();exporter.parse(currentModel,result=>{const blob=result instanceof ArrayBuffer?new Blob([result],{type:'model/gltf-binary'}):new Blob([JSON.stringify(result)],{type:'model/gltf+json'});downloadBlob(blob,'HoloVision_3D_Model.glb');status('GLB model downloaded. Import it into Blender, Unity, Unreal, or another 3D viewer.','good');},err=>{console.error(err);status('GLB export failed: '+(err?.message||err),'bad');},{binary:true,onlyVisible:true});});
+$('importGlb').addEventListener('click',()=>$('glbInput').click());
+$('glbInput').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const buffer=await file.arrayBuffer();const loader=new GLTFLoader();loader.parse(buffer,'',gltf=>{const root=gltf.scene;const box=new THREE.Box3().setFromObject(root);const size=box.getSize(new THREE.Vector3());const center=box.getCenter(new THREE.Vector3());root.position.sub(center);const maxDim=Math.max(size.x,size.y,size.z)||1;root.scale.multiplyScalar(2.2/maxDim);clearModel();currentModel=root;currentModel.name='IMPORTED_GLB_MODEL';scene.add(currentModel);camera.position.set(0,.4,3.8);orbit.target.set(0,0,0);orbit.update();$('modelState').textContent='IMPORTED MODEL';$('meshInfo').textContent=file.name.toUpperCase();$('viewStatus').textContent='IMPORTED GLB · EDIT TRANSFORM';['exportGlb','wireBtn','resetModel'].forEach(id=>$(id).disabled=false);$('moveX').value=0;$('moveY').value=0;$('moveZ').value=0;$('rotateY').value=0;$('scale').value=1;syncTransformLabels();status('GLB imported. Move, rotate, scale, and export it again.','good');},err=>{throw err;});}catch(err){status('Could not import this file: '+(err.message||err),'bad');}e.target.value='';});
+function downloadBlob(blob,name){const a=document.createElement('a');const url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
+window.addEventListener('beforeunload',()=>{stopCamera();cancelAnimationFrame(raf);if(renderer)renderer.dispose();photos.forEach(p=>URL.revokeObjectURL(p.url));});
+</script>
+</body>
+</html>
